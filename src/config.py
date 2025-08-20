@@ -1,49 +1,130 @@
 import urllib.parse
 from dataclasses import dataclass
-from typing import List, Literal, Optional
-from src.models import District, ResultLimit
+from typing import List, Literal, Optional, Dict
+from .models import District, ResultLimit
+
+BASE_URL = "https://www.otodom.pl/pl/wyniki"
+DEFAULT_PARAMS = {"ownerTypeSingleSelect": "ALL", "by": "DEFAULT", "direction": "DESC"}
+
+PropertyType = Literal["dom", "mieszkanie"]
+ListingType = Literal["sprzedaz", "wynajem"]
+SortDirection = Literal["DESC", "ASC"]
 
 
 @dataclass
 class ScraperConfig:
+    """Configuration class for building Otodom scraper URLs"""
+
     locations: List[District]
-    property_type: Literal["dom", "mieszkanie"] = "mieszkanie"
-    listing_type: Literal["sprzedaz", "wynajem"] = "sprzedaz"
+    property_type: PropertyType = "mieszkanie"
+    listing_type: ListingType = "sprzedaz"
     limit: ResultLimit = ResultLimit.MEDIUM
     price_min: Optional[int] = None
     price_max: Optional[int] = None
-    direction: Optional[Literal["DESC", "ASC"]] = None
+    direction: Optional[SortDirection] = None
 
-    def get_url(self, page: int = 1) -> str:
+    def __post_init__(self):
+        """Validate configuration after initialization"""
+        if not self.locations:
+            raise ValueError("At least one location must be specified")
+
+        if self.price_min is not None and self.price_min < 0:
+            raise ValueError("Minimum price cannot be negative")
+
+        if self.price_max is not None and self.price_max < 0:
+            raise ValueError("Maximum price cannot be negative")
+
+        if (
+            self.price_min is not None
+            and self.price_max is not None
+            and self.price_min > self.price_max
+        ):
+            raise ValueError("Minimum price cannot be greater than maximum price")
+
+    def _build_base_url(self) -> str:
+        """Build the base URL based on number of locations"""
         if len(self.locations) == 1:
             district = self.locations[0].value
-            base_url = f"https://www.otodom.pl/pl/wyniki/{self.listing_type}/{self.property_type}/{district}"
-            params = []
-            params.append(f"limit={self.limit.value}")
-            params.append("ownerTypeSingleSelect=ALL")
-            params.append("by=DEFAULT")
-            params.append("direction=DESC")
+            return f"{BASE_URL}/{self.listing_type}/{self.property_type}/{district}"
         else:
-            base_url = f"https://www.otodom.pl/pl/wyniki/{self.listing_type}/{self.property_type}/wiele-lokalizacji"
+            return (
+                f"{BASE_URL}/{self.listing_type}/{self.property_type}/wiele-lokalizacji"
+            )
+
+    def _build_location_params(self) -> Dict[str, str]:
+        """Build location-specific parameters"""
+        if len(self.locations) > 1:
             locations_list = [district.value for district in self.locations]
             locations_string = "[" + ",".join(locations_list) + "]"
-            locations_encoded = urllib.parse.quote(locations_string)
-            params = []
-            params.append(f"limit={self.limit.value}")
-            params.append("ownerTypeSingleSelect=ALL")
-            params.append(f"locations={locations_encoded}")
-            params.append("by=DEFAULT")
-            params.append("direction=DESC")
+            return {"locations": urllib.parse.quote(locations_string)}
+        return {}
 
-        if page > 1:
-            params.append(f"page={page}")
+    def _build_price_params(self) -> Dict[str, str]:
+        """Build price-related parameters"""
+        params = {}
         if self.price_min is not None:
-            params.append(f"priceMin={self.price_min}")
+            params["priceMin"] = str(self.price_min)
         if self.price_max is not None:
-            params.append(f"priceMax={self.price_max}")
-        if self.direction is not None:
-            params = [p for p in params if not p.startswith("direction=")]
-            params.append(f"direction={self.direction}")
+            params["priceMax"] = str(self.price_max)
+        return params
 
-        query_string = "&".join(params)
+    def _build_pagination_params(self, page: int) -> Dict[str, str]:
+        """Build pagination parameters"""
+        return {"page": str(page)} if page > 1 else {}
+
+    def _build_all_params(self, page: int = 1) -> Dict[str, str]:
+        """Build all URL parameters"""
+        params = {}
+
+        params.update(DEFAULT_PARAMS)
+        params["limit"] = str(self.limit.value)
+        params.update(self._build_location_params())
+        params.update(self._build_price_params())
+        params.update(self._build_pagination_params(page))
+
+        if self.direction is not None:
+            params["direction"] = self.direction
+
+        return params
+
+    def get_url(self, page: int = 1) -> str:
+        """Generate the complete URL for scraping"""
+        if page < 1:
+            raise ValueError("Page number must be 1 or greater")
+
+        base_url = self._build_base_url()
+        params = self._build_all_params(page)
+
+        query_string = "&".join(f"{key}={value}" for key, value in params.items())
+
         return f"{base_url}?{query_string}"
+
+    def get_urls(self, max_pages: int = 1) -> List[str]:
+        """Generate multiple URLs for pagination"""
+        if max_pages < 1:
+            raise ValueError("max_pages must be 1 or greater")
+
+        return [self.get_url(page) for page in range(1, max_pages + 1)]
+
+    def __str__(self) -> str:
+        """String representation of the config"""
+        return (
+            f"ScraperConfig("
+            f"locations={len(self.locations)} districts, "
+            f"type={self.property_type}, "
+            f"listing={self.listing_type}, "
+            f"limit={self.limit.value})"
+        )
+
+    def __repr__(self) -> str:
+        """Detailed representation for debugging"""
+        return (
+            f"ScraperConfig("
+            f"locations={[d.name for d in self.locations]}, "
+            f"property_type='{self.property_type}', "
+            f"listing_type='{self.listing_type}', "
+            f"limit={self.limit}, "
+            f"price_min={self.price_min}, "
+            f"price_max={self.price_max}, "
+            f"direction={self.direction})"
+        )
