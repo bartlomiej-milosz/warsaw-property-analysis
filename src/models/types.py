@@ -14,3 +14,4 @@ class ResultLimit(Enum):
     MEDIUM = 36
     LARGE = 48
     XLARGE = 72
+    

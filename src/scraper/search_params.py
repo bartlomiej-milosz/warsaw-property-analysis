@@ -1,7 +1,9 @@
 import urllib.parse
 from dataclasses import dataclass
 from typing import List, Literal, Optional, Dict
-from .models import District, ResultLimit
+
+from ..models.types import District, ResultLimit
+
 
 BASE_URL = "https://www.otodom.pl/pl/wyniki"
 DEFAULT_PARAMS = {"ownerTypeSingleSelect": "ALL", "by": "DEFAULT", "direction": "DESC"}
@@ -12,7 +14,7 @@ SortDirection = Literal["DESC", "ASC"]
 
 
 @dataclass
-class ScraperConfig:
+class PropertySearchQuery:
     """Configuration class for building Otodom scraper URLs"""
 
     locations: List[District]

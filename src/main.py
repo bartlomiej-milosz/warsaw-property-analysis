@@ -1,7 +1,8 @@
-from .config import ScraperConfig
-from .models import District, ResultLimit
-from .scraper import PropertyScrapper
 import logging
+
+from .scraper.property_scraper import PropertyScraper
+from .scraper.search_params import PropertySearchQuery
+from .models.types import District, ResultLimit
 
 logging.basicConfig(
     level=logging.INFO,
@@ -9,9 +10,9 @@ logging.basicConfig(
 )
 
 def main():
-    config = ScraperConfig(locations=[District.MOKOTOW, District.WILANOW], limit=ResultLimit.SMALL)
-    scraper = PropertyScrapper(config=config)
-    scraper.scrape_multiple_pages(2)
+    config = PropertySearchQuery(locations=[District.MOKOTOW], limit=ResultLimit.SMALL)
+    scraper = PropertyScraper(config=config)
+    scraper.scrape_multiple_pages(10)
     print(scraper.properties)
 
 if __name__ == "__main__":
