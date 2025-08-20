@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 import requests
 import urllib
 from bs4 import BeautifulSoup
@@ -22,9 +22,9 @@ HEADERS: Dict[str, str] = {
 
 @dataclass
 class Property:
-    price: Optional[int] = None
-    location: str
     link: str
+    price: Optional[int] = None
+    location: Optional[str] = None
 
 
 class PropertyScrapper:
@@ -86,7 +86,29 @@ class PropertyScrapper:
             return None
 
     def _get_location(self, soup: BeautifulSoup) -> str:
-        pass
+        """Extract location from listing detail page"""
+        try:
+            location_tag = soup.find(
+                "a",
+                {
+                    "data-sentry-element": "StyledLink",
+                    "data-sentry-source-file": "MapLink.tsx",
+                },
+            )
+            if location_tag:
+                return location_tag.text
+            return None
+        except Exception as e:
+            logger.warning(f"Could not extract location: {e}")
+            return None
+
+    def _extract_all_details(self, soup: BeautifulSoup) -> Dict[str, Any]:
+        property_data: Dict[str, Any] = {}
+
+        property_data["price"] = self._get_price(soup)
+        property_data["location"] = self._get_location(soup)
+
+        return property_data
 
     def scrape_single_page_details(self, page: int = 1) -> List[Property]:
         """Scrape one page and return properties"""
@@ -100,15 +122,16 @@ class PropertyScrapper:
                 response = self.session.get(detail_link)
                 soup = BeautifulSoup(response.content, "html.parser")
 
-                price: Optional[int] = self._get_price(soup)
-                location: str = self._get_location(soup)
+                property_data: Dict[str, Any] = self._extract_all_details(soup)
 
                 property_obj = Property(
-                    price=price, location=location, link=detail_link
+                    link=detail_link,
+                    price=property_data.get("price"),
+                    location=property_data.get("location"),
                 )
                 page_properties.append(property_obj)
 
-                logger.info(f"Scraped: price={price}, location={location}")
+                logger.info(f"Scraped: {property_obj}")
             except Exception as e:
                 logger.error(f"Failed to scrape {detail_link}: {e}")
                 continue

@@ -9,10 +9,10 @@ logging.basicConfig(
 )
 
 def main():
-    config = ScraperConfig([District.MOKOTOW], ResultLimit.SMALL)
-    scraper = PropertyScrapper(config)
-    results = scraper.get_listing_card_links(1)
-    print(results)
+    config = ScraperConfig(locations=[District.MOKOTOW, District.WILANOW], limit=ResultLimit.SMALL)
+    scraper = PropertyScrapper(config=config)
+    scraper.scrape_multiple_pages(2)
+    print(scraper.properties)
 
 if __name__ == "__main__":
     main()
