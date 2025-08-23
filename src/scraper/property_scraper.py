@@ -20,6 +20,14 @@ class PropertyScraper:
         self.session = requests.Session()
         self.session.headers.update(HEADERS)
 
+    def get_properties(self) -> List[Property]:
+        """Get list of scraped properties"""
+        return self.properties
+
+    def get_properties_count(self) -> int:
+        """Get number of scraped properties"""
+        return len(self.properties)
+
     def _extract_links(self, card_elements) -> List[str]:
         """Helper function for extracting href from given <a> element"""
         card_links: List[str] = []
@@ -41,6 +49,7 @@ class PropertyScraper:
             logger.info(f"Fetching page {page}")
             url: str = self.config.get_url(page=page)
             response = self.session.get(url)
+            response.encoding = 'utf-8'
             soup = BeautifulSoup(response.content, "html.parser")
             listing_card_elements = soup.find_all("a", {"data-cy": "listing-item-link"})
             logger.info(f"Found {len(listing_card_elements)} listings")
@@ -88,59 +97,57 @@ class PropertyScraper:
             logger.warning(f"Could not extract location: {e}")
             return None
 
-    def _find_field_value_by_label(
-        self, soup: BeautifulSoup, label_text: str
-    ) -> Optional[str]:
+    def _find_item_containers(self, soup: BeautifulSoup) -> List:
+        """Find all ItemGridContainer elements"""
+        return soup.find_all(
+            "div",
+            {
+                "data-sentry-element": "ItemGridContainer",
+                "data-sentry-source-file": "AdDetailItem.tsx",
+            },
+        )
+
+    def _find_label_container(self, container, label_text: str) -> Optional[Any]:
+        """Find container with matching label text"""
+        label_div = container.find(
+            "div",
+            {
+                "data-sentry-element": "Item",
+                "data-sentry-source-file": "AdDetailItem.tsx",
+            },
+        )
+        
+        if label_div and label_text in label_div.get_text():
+            return label_div
+        return None
+
+    def _find_field_value_by_label(self, soup: BeautifulSoup, label_text: str) -> Optional[str]:
         """Universal function to find field value by label in ItemGridContainer"""
         try:
-            containers = soup.find_all(
-                "div",
-                {
-                    "data-sentry-element": "ItemGridContainer",
-                    "data-sentry-source-file": "AdDetailItem.tsx",
-                },
-            )
-
+            containers = self._find_item_containers(soup)
+            
             for container in containers:
-                label_div = container.find(
-                    "div",
-                    {
-                        "data-sentry-element": "Item",
-                        "data-sentry-source-file": "AdDetailItem.tsx",
-                    },
-                )
-
-                if label_div and label_text in label_div.get_text():
+                label_div = self._find_label_container(container, label_text)
+                
+                if label_div:
                     value_div = label_div.find_next_sibling("div")
                     if value_div:
                         return value_div.get_text(strip=True)
-
+            
             return None
         except Exception as e:
             logger.warning(f"Could not extract field '{label_text}': {e}")
             return None
 
-    def _get_additional_features(self, soup: BeautifulSoup) -> Optional[List[str]]:
-        """Extract additional features as list"""
+    def _get_additional_features(self, soup: BeautifulSoup) -> Optional[str]:
+        """Extract additional features as pipe-separated string"""
         try:
-            containers = soup.find_all(
-                "div",
-                {
-                    "data-sentry-element": "ItemGridContainer",
-                    "data-sentry-source-file": "AdDetailItem.tsx",
-                },
-            )
-
+            containers = self._find_item_containers(soup)
+            
             for container in containers:
-                label_div = container.find(
-                    "div",
-                    {
-                        "data-sentry-element": "Item",
-                        "data-sentry-source-file": "AdDetailItem.tsx",
-                    },
-                )
-
-                if label_div and "Informacje dodatkowe:" in label_div.get_text():
+                label_div = self._find_label_container(container, "Informacje dodatkowe:")
+                
+                if label_div:
                     features_div = label_div.find_next_sibling("div")
                     if features_div:
                         spans = features_div.find_all("span", class_="css-axw7ok")
@@ -149,10 +156,10 @@ class PropertyScraper:
                             for span in spans
                             if span.get_text(strip=True)
                         ]
-
+                        
                         if features:
                             return " | ".join(features)
-
+            
             return None
         except Exception as e:
             logger.warning(f"Could not extract additional features: {e}")
@@ -182,6 +189,7 @@ class PropertyScraper:
 
             response = self.session.get(detail_link)
             response.raise_for_status()
+            response.encoding = 'utf-8'
             soup = BeautifulSoup(response.content, "html.parser")
 
             property_data: Dict[str, Any] = self._extract_all_details(soup)

@@ -1,10 +1,13 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import datetime
+import random
 from typing import Optional
 
 
 @dataclass
 class Property:
     link: str
+    id: str = field(default_factory=lambda: Property._generate_smart_id())
 
     # Basic info
     price: Optional[int] = None
@@ -30,4 +33,12 @@ class Property:
 
     # Additional features
     additional_features: Optional[str] = None
+
+    @staticmethod
+    def _generate_smart_id() -> str:
+        now = datetime.now()
+        date_part = now.strftime("%Y%m%d")
+        time_part = now.strftime("%H%M%S")
+        random_part = random.randint(100, 999)
+        return f"{date_part}{time_part}{random_part}"
     

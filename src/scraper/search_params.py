@@ -1,16 +1,14 @@
 import urllib.parse
 from dataclasses import dataclass
-from typing import List, Literal, Optional, Dict
+from typing import List, Optional, Dict
 
-from ..models.types import District, ResultLimit
+from ..models.types import District, ListingType, PropertyType, ResultLimit, SortDirection
 
 
 BASE_URL = "https://www.otodom.pl/pl/wyniki"
 DEFAULT_PARAMS = {"ownerTypeSingleSelect": "ALL", "by": "DEFAULT", "direction": "DESC"}
 
-PropertyType = Literal["dom", "mieszkanie"]
-ListingType = Literal["sprzedaz", "wynajem"]
-SortDirection = Literal["DESC", "ASC"]
+
 
 
 @dataclass
@@ -18,7 +16,7 @@ class PropertySearchQuery:
     """Configuration class for building Otodom scraper URLs"""
 
     locations: List[District]
-    property_type: PropertyType = "mieszkanie"
+    property_type: PropertyType = PropertyType.APARTMENT
     listing_type: ListingType = "sprzedaz"
     limit: ResultLimit = ResultLimit.MEDIUM
     price_min: Optional[int] = None
@@ -47,10 +45,10 @@ class PropertySearchQuery:
         """Build the base URL based on number of locations"""
         if len(self.locations) == 1:
             district = self.locations[0].value
-            return f"{BASE_URL}/{self.listing_type}/{self.property_type}/{district}"
+            return f"{BASE_URL}/{self.listing_type}/{self.property_type.value}/{district}"
         else:
             return (
-                f"{BASE_URL}/{self.listing_type}/{self.property_type}/wiele-lokalizacji"
+                f"{BASE_URL}/{self.listing_type}/{self.property_type.value}/wiele-lokalizacji"
             )
 
     def _build_location_params(self) -> Dict[str, str]:
@@ -113,7 +111,7 @@ class PropertySearchQuery:
         return (
             f"ScraperConfig("
             f"locations={len(self.locations)} districts, "
-            f"type={self.property_type}, "
+            f"type={self.property_type.value}, "
             f"listing={self.listing_type}, "
             f"limit={self.limit.value})"
         )
@@ -123,7 +121,7 @@ class PropertySearchQuery:
         return (
             f"ScraperConfig("
             f"locations={[d.name for d in self.locations]}, "
-            f"property_type='{self.property_type}', "
+            f"property_type='{self.property_type.value}', "
             f"listing_type='{self.listing_type}', "
             f"limit={self.limit}, "
             f"price_min={self.price_min}, "
