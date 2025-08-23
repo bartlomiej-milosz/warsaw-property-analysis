@@ -18,6 +18,7 @@ class BatchScraper:
 
     def get_output_directory(self, property_type: PropertyType) -> str:
         """Get output directory based on property type"""
+
         if property_type == PropertyType.APARTMENT:
             return os.path.join(self.base_output_dir, "apartments")
         elif property_type == PropertyType.HOUSE:
@@ -33,12 +34,8 @@ class BatchScraper:
         limit: ResultLimit,
         max_properties: int,
     ) -> int:
-        """
-        Scrape one district-property type combination
+        """Scrape one district-property type combination"""
 
-        Returns:
-            int: Number of properties scraped
-        """
         logger.info(f"Scraping {district.name} - {property_type.name}")
 
         try:
@@ -76,17 +73,16 @@ class BatchScraper:
         output_dir = self.get_output_directory(property_type)
         os.makedirs(output_dir, exist_ok=True)
 
-        # Create filename
-        filename = f"{district.name.lower()}_{property_type.name.lower()}.csv"
+        filename = f"{district.name.lower()}_{property_type.name.lower()}{"s"}.csv"
         filepath = os.path.join(output_dir, filename)
 
         if properties:
             df = pd.DataFrame([prop.__dict__ for prop in properties])
             df.to_csv(filepath, index=False, encoding="utf-8-sig")
-            logger.info(f"✅ Saved {len(properties)} properties to {filepath}")
+            logger.info(f"Saved {len(properties)} properties to {filepath}")
         else:
             logger.warning(
-                f"❌ No properties found for {district.name} - {property_type.name}"
+                f"No properties found for {district.name} - {property_type.name}"
             )
 
     def scrape_multiple_combinations(
@@ -95,13 +91,11 @@ class BatchScraper:
         property_types: List[PropertyType],
         limit: ResultLimit,
         max_properties: int,
+        delay_seconds: int = 2,
     ) -> int:
-        """
-        Scrape multiple district-property type combinations
+        """Scrape multiple district-property type combinations"""
+        import time
 
-        Returns:
-            int: Total number of properties scraped
-        """
         total_scraped = 0
 
         for district in districts:
@@ -113,5 +107,14 @@ class BatchScraper:
                     max_properties=max_properties,
                 )
                 total_scraped += count
+
+                # Add delay between scrapes (except for the last one)
+                if not (
+                    district == districts[-1] and property_type == property_types[-1]
+                ):
+                    logger.info(
+                        f"Waiting {delay_seconds} seconds before next scrape..."
+                    )
+                    time.sleep(delay_seconds)
 
         return total_scraped
