@@ -1,7 +1,7 @@
 import logging
 from typing import List
-from .scraper.batch_scraper import BatchScraper  # New module
-from .models.types import District, PropertyType, ResultLimit
+from .scraper.batch_scraper import BatchScraper
+from .models.types import District, ListingType, ResultLimit
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -10,7 +10,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 WARSAW_DISTRICTS: List[District] = list(District)
-PROPERTY_TYPES: List[PropertyType] = list(PropertyType)
+LISTING_TYPES: List[ListingType] = list(ListingType)
 MAX_PROPERTIES: int = 500
 
 
@@ -22,15 +22,16 @@ def run():
 
     total_scraped = batch_scraper.scrape_multiple_combinations(
         districts=WARSAW_DISTRICTS,
-        property_types=PROPERTY_TYPES,
+        listing_types=LISTING_TYPES,
         limit=ResultLimit.XLARGE,
         max_properties=MAX_PROPERTIES,
-        delay_seconds=2,  # Add delay parameter
+        delay_seconds=10,
     )
 
     logger.info(f"Scraping completed! Total properties: {total_scraped}")
-    logger.info("Check ./data/raw/apartments/ and ./data/raw/houses/ for results")
+    logger.info("Check ./data/raw/sales/ and ./data/raw/rents/ for results")
 
 
 if __name__ == "__main__":
-    run()
+    pass
+    # run() - uncomment to run scraper

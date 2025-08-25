@@ -49,7 +49,7 @@ class PropertyScraper:
             logger.info(f"Fetching page {page}")
             url: str = self.config.get_url(page=page)
             response = self.session.get(url)
-            response.encoding = 'utf-8'
+            response.encoding = "utf-8"
             soup = BeautifulSoup(response.content, "html.parser")
             listing_card_elements = soup.find_all("a", {"data-cy": "listing-item-link"})
             logger.info(f"Found {len(listing_card_elements)} listings")
@@ -116,24 +116,26 @@ class PropertyScraper:
                 "data-sentry-source-file": "AdDetailItem.tsx",
             },
         )
-        
+
         if label_div and label_text in label_div.get_text():
             return label_div
         return None
 
-    def _find_field_value_by_label(self, soup: BeautifulSoup, label_text: str) -> Optional[str]:
+    def _find_field_value_by_label(
+        self, soup: BeautifulSoup, label_text: str
+    ) -> Optional[str]:
         """Universal function to find field value by label in ItemGridContainer"""
         try:
             containers = self._find_item_containers(soup)
-            
+
             for container in containers:
                 label_div = self._find_label_container(container, label_text)
-                
+
                 if label_div:
                     value_div = label_div.find_next_sibling("div")
                     if value_div:
                         return value_div.get_text(strip=True)
-            
+
             return None
         except Exception as e:
             logger.warning(f"Could not extract field '{label_text}': {e}")
@@ -143,10 +145,12 @@ class PropertyScraper:
         """Extract additional features as pipe-separated string"""
         try:
             containers = self._find_item_containers(soup)
-            
+
             for container in containers:
-                label_div = self._find_label_container(container, "Informacje dodatkowe:")
-                
+                label_div = self._find_label_container(
+                    container, "Informacje dodatkowe:"
+                )
+
                 if label_div:
                     features_div = label_div.find_next_sibling("div")
                     if features_div:
@@ -156,10 +160,10 @@ class PropertyScraper:
                             for span in spans
                             if span.get_text(strip=True)
                         ]
-                        
+
                         if features:
                             return " | ".join(features)
-            
+
             return None
         except Exception as e:
             logger.warning(f"Could not extract additional features: {e}")
@@ -182,14 +186,14 @@ class PropertyScraper:
         property_data["additional_features"] = self._get_additional_features(soup)
 
         return property_data
-    
+
     def _scrape_single_property(self, detail_link: str) -> Optional[Property]:
         try:
             logger.info(f"Scraping: {detail_link}")
 
             response = self.session.get(detail_link)
             response.raise_for_status()
-            response.encoding = 'utf-8'
+            response.encoding = "utf-8"
             soup = BeautifulSoup(response.content, "html.parser")
 
             property_data: Dict[str, Any] = self._extract_all_details(soup)
@@ -217,21 +221,23 @@ class PropertyScraper:
 
             logger.info(f"Scraped: {property_obj}")
             return property_obj
-            
+
         except Exception as e:
             logger.error(f"Failed to scrape {detail_link}: {e}")
             return None
 
     def scrape_single_page_details(self, page: int = 1) -> List[Property]:
         """Scrape one page and return properties - THREADED VERSION"""
-        
+
         listing_card_links: List[str] = self._get_listing_card_links(page=page)
-        
+
         with ThreadPoolExecutor(max_workers=5) as executor:
-            results = list(executor.map(self._scrape_single_property, listing_card_links))
-        
+            results = list(
+                executor.map(self._scrape_single_property, listing_card_links)
+            )
+
         page_properties = [prop for prop in results if prop is not None]
-        
+
         return page_properties
 
     def scrape_multiple_pages(self, max_pages: int) -> None:

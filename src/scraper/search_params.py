@@ -2,13 +2,17 @@ import urllib.parse
 from dataclasses import dataclass
 from typing import List, Optional, Dict
 
-from ..models.types import District, ListingType, PropertyType, ResultLimit, SortDirection
+from ..models.types import (
+    District,
+    ListingType,
+    PropertyType,
+    ResultLimit,
+    SortDirection,
+)
 
 
 BASE_URL = "https://www.otodom.pl/pl/wyniki"
 DEFAULT_PARAMS = {"ownerTypeSingleSelect": "ALL", "by": "DEFAULT", "direction": "DESC"}
-
-
 
 
 @dataclass
@@ -17,7 +21,7 @@ class PropertySearchQuery:
 
     locations: List[District]
     property_type: PropertyType = PropertyType.APARTMENT
-    listing_type: ListingType = "sprzedaz"
+    listing_type: ListingType = ListingType.SALE
     limit: ResultLimit = ResultLimit.MEDIUM
     price_min: Optional[int] = None
     price_max: Optional[int] = None
@@ -45,11 +49,9 @@ class PropertySearchQuery:
         """Build the base URL based on number of locations"""
         if len(self.locations) == 1:
             district = self.locations[0].value
-            return f"{BASE_URL}/{self.listing_type}/{self.property_type.value}/{district}"
+            return f"{BASE_URL}/{self.listing_type.value}/{self.property_type.value}/{district}"
         else:
-            return (
-                f"{BASE_URL}/{self.listing_type}/{self.property_type.value}/wiele-lokalizacji"
-            )
+            return f"{BASE_URL}/{self.listing_type.value}/{self.property_type.value}/wiele-lokalizacji"
 
     def _build_location_params(self) -> Dict[str, str]:
         """Build location-specific parameters"""
@@ -112,7 +114,7 @@ class PropertySearchQuery:
             f"ScraperConfig("
             f"locations={len(self.locations)} districts, "
             f"type={self.property_type.value}, "
-            f"listing={self.listing_type}, "
+            f"listing={self.listing_type.value}, "
             f"limit={self.limit.value})"
         )
 
@@ -122,7 +124,7 @@ class PropertySearchQuery:
             f"ScraperConfig("
             f"locations={[d.name for d in self.locations]}, "
             f"property_type='{self.property_type.value}', "
-            f"listing_type='{self.listing_type}', "
+            f"listing_type='{self.listing_type.value}', "
             f"limit={self.limit}, "
             f"price_min={self.price_min}, "
             f"price_max={self.price_max}, "

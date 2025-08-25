@@ -41,4 +41,3 @@ class Property:
         time_part = now.strftime("%H%M%S")
         random_part = random.randint(100, 999)
         return f"{random_part}{time_part}"
-    

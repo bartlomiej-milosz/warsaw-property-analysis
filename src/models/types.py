@@ -1,7 +1,6 @@
 from enum import Enum
 from typing import Literal
 
-ListingType = Literal["sprzedaz", "wynajem"]
 SortDirection = Literal["DESC", "ASC"]
 
 
@@ -36,3 +35,8 @@ class ResultLimit(Enum):
 class PropertyType(Enum):
     APARTMENT = "mieszkanie"
     HOUSE = "dom"
+
+
+class ListingType(Enum):
+    SALE = "sprzedaz"
+    RENT = "wynajem"
