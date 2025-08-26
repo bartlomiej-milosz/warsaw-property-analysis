@@ -14,7 +14,7 @@ LISTING_TYPES: List[ListingType] = list(ListingType)
 MAX_PROPERTIES: int = 500
 
 
-def run():
+def main():
     """Main scraping function - orchestrates the entire scraping process"""
     logger.info("Starting property scraping...")
 
@@ -33,5 +33,4 @@ def run():
 
 
 if __name__ == "__main__":
-    pass
-    # run() - uncomment to run scraper
+    main()
