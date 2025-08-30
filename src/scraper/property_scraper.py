@@ -3,7 +3,7 @@ import requests
 import urllib
 import logging
 from typing import Any, Dict, List, Optional
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 from ..models.property import Property
 from .config import ALL_DETAILS, HEADERS
 from .search_params import PropertySearchQuery
@@ -126,16 +126,13 @@ class PropertyScraper:
     ) -> Optional[str]:
         """Universal function to find field value by label in ItemGridContainer"""
         try:
-            containers = self._find_item_containers(soup)
-
+            containers: List[Tag] = self._find_item_containers(soup)
             for container in containers:
-                label_div = self._find_label_container(container, label_text)
-
+                label_div: Optional[Tag] = self._find_label_container(container, label_text)
                 if label_div:
-                    value_div = label_div.find_next_sibling("div")
+                    value_div: Optional[Tag] = label_div.find_next_sibling("div")
                     if value_div:
                         return value_div.get_text(strip=True)
-
             return None
         except Exception as e:
             logger.warning(f"Could not extract field '{label_text}': {e}")
